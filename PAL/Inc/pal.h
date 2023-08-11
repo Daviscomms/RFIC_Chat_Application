@@ -8,6 +8,7 @@
 #include "app_config.h"
 #include "return_val.h"
 #include "pal_timer.h"
+#include "timer.h"
 
 #ifdef PAL_USE_SPI_TRX
 #   ifdef PAL_SPI_BLOCK_MODE
@@ -136,10 +137,10 @@ extern "C" {
      *          - @ref PAL_TMR_INVALID_TIMEOUT if timeout is not within timeout range.
      * @ingroup apiPalApi
      */
-    retval_t pal_timer_start(uint16_t timer_id,
+    retval_t pal_timer_start(timer_handle_t** timer_handler,
                              timer_instance_id_t timer_instance_id,
                              uint32_t timer_count,
-                             timeout_type_t timeout_type,
+                             timer_type_t timer_type,
                              FUNC_PTR(timer_cb),
                              void *param_cb);
 
@@ -158,7 +159,7 @@ extern "C" {
 	 *			- @ref PAL_TMR_INVALID_ID if the specified timer id is undefined.
 	 * @ingroup apiPalApi
 	 */
-	retval_t pal_timer_stop(uint16_t timer_id,
+	retval_t pal_timer_stop(timer_handle_t** timer_handler,
 							timer_instance_id_t timer_instance_id);
 	
 	/**

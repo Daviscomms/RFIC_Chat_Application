@@ -34,6 +34,10 @@
 #include "mac_build_config.h"
 #include <signal.h>  
 
+extern timer_handle_t *TAL_TIMER;
+extern timer_handle_t *TAL_ACK_TIMER;
+extern timer_handle_t *TAL_CALIBATION_TIMER;
+extern timer_handle_t *TAL_AGC_TIMER;
 /* === TYPES =============================================================== */
 
 /* === MACROS ============================================================== */
@@ -496,7 +500,7 @@ static void handle_trxerr(trx_id_t trx_id)
  */
 void stop_tal_timer(trx_id_t trx_id)
 {
-    pal_timer_stop(TAL_T, trx_id);
+    pal_timer_stop(&TAL_TIMER, trx_id);
 }
 
 
@@ -635,8 +639,8 @@ static void inline start_agc_timer(trx_id_t trx_id)
 {
     if (tal_pib[trx_id].phy.modulation == LEG_OQPSK)
     {
-        pal_timer_start(TAL_T_AGC, trx_id, AGC_LEG_OQPSK_DEAF_PERIOD,
-                        TIMEOUT_RELATIVE, (FUNC_PTR())trigger_agc_workaround,
+        pal_timer_start(&TAL_AGC_TIMER, trx_id, AGC_LEG_OQPSK_DEAF_PERIOD,
+                        TIMER_TYPE_ONESHORT, (FUNC_PTR())trigger_agc_workaround,
                         NULL);
         agc_timer_running[trx_id] = true;
     }
@@ -652,7 +656,7 @@ static void inline stop_agc_timer(trx_id_t trx_id)
     {
         if (agc_timer_running[trx_id])
         {
-            pal_timer_stop(TAL_T_AGC, trx_id);
+            pal_timer_stop(&TAL_AGC_TIMER, trx_id);
         }
     }
 }

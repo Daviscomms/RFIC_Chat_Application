@@ -31,6 +31,10 @@
 #include "tal_pib.h"
 #include "tal_internal.h"
 
+extern timer_handle_t *TAL_TIMER;
+extern timer_handle_t *TAL_ACK_TIMER;
+extern timer_handle_t *TAL_CALIBATION_TIMER;
+extern timer_handle_t *TAL_AGC_TIMER;
 /* === EXTERNALS =========================================================== */
 
 /* === TYPES =============================================================== */
@@ -153,7 +157,8 @@ static void handle_incoming_frame(trx_id_t trx_id)
             if (is_ack_valid(trx_id))
             {
                 /* Stop ACK timeout timer */
-                stop_tal_timer(trx_id);
+                //stop_tal_timer(trx_id);
+                pal_timer_stop(&TAL_ACK_TIMER, trx_id);
                 /* Re-store frame filter to pass "normal" frames */
                 /* Configure frame filter to receive all allowed frame types */
 #ifdef SUPPORT_FRAME_FILTER_CONFIGURATION
@@ -268,11 +273,6 @@ static bool upload_frame(trx_id_t trx_id)
 #endif
     uint16_t rx_frm_buf_offset = BB_RX_FRM_BUF_OFFSET * trx_id;
     pal_dev_read(RF215_TRX, rx_frm_buf_offset + RG_BBC0_FBRXS, rx_frm_info[trx_id]->mpdu, len);
-    printf("Received Frame length = %d, len = %d\n", phy_frame_len, len);
-    for (int i = 0; i< len; i++)
-    {
-        printf("rx_frm_info[trx_id]->mpdu[%d] = 0x%x\n", i, rx_frm_info[trx_id]->mpdu[i]);
-    }
 
     return true;
 }

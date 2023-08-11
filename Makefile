@@ -60,6 +60,7 @@ OBJECTS = \
 	$(TARGET_DIR)/main.o\
 	$(TARGET_DIR)/spi.o\
 	$(TARGET_DIR)/gpio.o\
+	$(TARGET_DIR)/timer.o\
 	$(TARGET_DIR)/pal.o\
 	$(TARGET_DIR)/bmm.o\
 	$(TARGET_DIR)/qmm.o\
@@ -127,6 +128,8 @@ $(TARGET_DIR)/spi.o: $(PATH_PAL)/Src/spi.c
 	$(CC) -c $(CFLAGS) $(INCLUDES) -o $@ $<
 $(TARGET_DIR)/gpio.o: $(PATH_PAL)/Src/gpio.c
 	$(CC) -c $(CFLAGS) $(INCLUDES) -o $@ $<
+$(TARGET_DIR)/timer.o: $(PATH_PAL)/Src/timer.c
+	$(CC) -c $(CFLAGS) $(INCLUDES) -o $@ $<
 $(TARGET_DIR)/pal.o: $(PATH_PAL)/Src/Pal.c
 	$(CC) -c $(CFLAGS) $(INCLUDES) -o $@ $<
 $(TARGET_DIR)/main.o: $(PATH_APP)/Src/main.c
@@ -143,6 +146,7 @@ Main:
 Pal:
 	make $(TARGET_DIR)/spi.o
 	make $(TARGET_DIR)/gpio.o
+	make $(TARGET_DIR)/timer.o
 	make $(TARGET_DIR)/pal.o
 	make $(TARGET_DIR)/pal_trx_spi_block_mode.o
 .PHONY:Tal

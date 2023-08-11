@@ -125,10 +125,6 @@ int spi_reg_write(spi_t* spi,uint16_t address,uint8_t value){
 		return -1;
 	}
 
-	/*
-	uint8_t reg_read = spi_reg_read(spi, address);
-	printf("The reg address = 0x%x, value = 0x%x\n", address, reg_read);
-	*/
 	return ret;
 }
 

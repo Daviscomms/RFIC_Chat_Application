@@ -29,6 +29,10 @@
 #include "tal_internal.h"
 #include <signal.h> 
 
+extern timer_handle_t *TAL_TIMER;
+extern timer_handle_t *TAL_ACK_TIMER;
+extern timer_handle_t *TAL_CALIBATION_TIMER;
+extern timer_handle_t *TAL_AGC_TIMER;
 /* === TYPES =============================================================== */
 
 /* === MACROS ============================================================== */
@@ -105,10 +109,10 @@ static void start_backoff(trx_id_t trx_id)
 #endif
 
         retval_t status =
-            pal_timer_start(TAL_T,
+            pal_timer_start(&TAL_TIMER,
                             trx_id,
                             backoff_duration_us,
-                            TIMEOUT_RELATIVE,
+                            TIMER_TYPE_ONESHORT,
                             (FUNC_PTR())cca_start,
                             NULL);
         if (status != MAC_SUCCESS)
@@ -158,7 +162,6 @@ static void start_backoff(trx_id_t trx_id)
  */
 //static void cca_start(timer_element_t *cb_timer_element)
 static void cca_start(union sigval v)
-
 {
     /* Immediately store trx id from callback. */
     trx_id_t trx_id = (trx_id_t)(v.sival_int);;

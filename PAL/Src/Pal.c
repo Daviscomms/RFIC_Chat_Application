@@ -6,6 +6,7 @@
 #include <sys/time.h>
 #include <string.h> 
 #include <signal.h>
+#include "timer.h"
 
 /* === Externals ============================================================ */
 extern At86rf215_Dev_t at86rf215_dev;
@@ -23,6 +24,7 @@ retval_t pal_init(void){
 		return FAILURE;
 	}
 	gettimeofday(&start,NULL);
+
 	return MAC_SUCCESS;
 }
 
@@ -55,39 +57,30 @@ void pal_get_current_time(uint32_t *current_time){
 }
 
 
-retval_t pal_timer_start(uint16_t id,
+retval_t pal_timer_start(timer_handle_t** timer_handler,
 						 timer_instance_id_t timer_instance_id,
 						 uint32_t timer_count,
-						 timeout_type_t timeout_type,
+						 timer_type_t timer_type,
 						 FUNC_PTR(timer_cb),
 						 void *param_cb){
-	timer_t timerid;
-	struct sigevent evp;
-	memset(&evp, 0, sizeof(struct sigevent));		//�����ʼ��
-	evp.sigev_value.sival_int=timer_instance_id;
-	evp.sigev_notify = SIGEV_THREAD;			//�߳�֪ͨ�ķ�ʽ����פ���߳�
-	evp.sigev_notify_function = timer_cb;		//�̺߳�����ַ	
-	if (timer_create(CLOCK_REALTIME, &evp, &timerid) == -1)
-	{
-		perror("fail to timer_create");
-		return FAILURE;
-	}
-	struct itimerspec it;
-	it.it_interval.tv_sec = 0;
-	it.it_interval.tv_nsec = 0;
-	it.it_value.tv_sec = timer_count/1000000;//s
-	it.it_value.tv_nsec = timer_count*1000-it.it_value.tv_sec*1000000;//ns
-	if (timer_settime(timerid, 0, &it, NULL) == -1)
-	{
-		perror("fail to timer_settime");
-		return FAILURE;
-	}
-	return MAC_SUCCESS;
 
+	*timer_handler = fn_timer_create(timer_type, (FUNC_PTR())timer_cb, timer_instance_id);
+	if (timer_handler == NULL)
+	{
+		perror("Failed to create timer.\n");
+		return FAILURE;
+	}
+
+	fn_timer_start((*timer_handler), (timer_tick_ms_t)timer_count);
+
+	return MAC_SUCCESS;
 }
 
-retval_t pal_timer_stop(uint16_t timer_id,
-							timer_instance_id_t timer_instance_id){
+retval_t pal_timer_stop(timer_handle_t** timer_handler,
+							timer_instance_id_t timer_instance_id)
+{
+	fn_timer_stop((*timer_handler));
+	fn_timer_delete((*timer_handler));
 	
 	return MAC_SUCCESS;
 }

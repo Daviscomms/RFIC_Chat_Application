@@ -32,6 +32,10 @@
 #include "tal_internal.h"
 #include "mac_build_config.h"
 
+extern timer_handle_t *TAL_TIMER;
+extern timer_handle_t *TAL_ACK_TIMER;
+extern timer_handle_t *TAL_CALIBATION_TIMER;
+extern timer_handle_t *TAL_AGC_TIMER;
 /* === TYPES ================================================================ */
 
 /* === MACROS =============================================================== */
@@ -102,10 +106,10 @@ void start_ftn_timer(trx_id_t trx_id)
     /* Calibration timer has already been stopped within this function. */
 
     /* Start periodic calibration timer. */
-    timer_status = pal_timer_start(TAL_T_CALIBRATION,
+    timer_status = pal_timer_start(&TAL_CALIBATION_TIMER,
                                    trx_id,
                                    TAL_CALIBRATION_TIMEOUT_US,
-                                   TIMEOUT_RELATIVE,
+                                   TIMER_TYPE_ONESHORT,
                                    (FUNC_PTR())ftn_timer_cb,
                                    NULL);
 
@@ -125,7 +129,7 @@ void start_ftn_timer(trx_id_t trx_id)
  */
 void stop_ftn_timer(trx_id_t trx_id)
 {
-    pal_timer_stop(TAL_T_CALIBRATION, trx_id);
+    pal_timer_stop(&TAL_CALIBATION_TIMER, trx_id);
 }
 #endif
 
@@ -190,11 +194,12 @@ static void ftn_timer_cb(union sigval v)
 static void postpone_tuning(trx_id_t trx_id)
 {
     /* Postpone filter tuning, since TAL is busy */
-    pal_timer_start(TAL_T_CALIBRATION,
+    pal_timer_start(&TAL_CALIBATION_TIMER,
                     trx_id,
                     POSTPONE_PERIOD,
-                    TIMEOUT_RELATIVE,
+                    TIMER_TYPE_ONESHORT,
                     (FUNC_PTR())ftn_timer_cb,
+                    ftn_timer_cb,
                     NULL);
 }
 #endif  /* ENABLE_FTN_PLL_CALIBRATION */

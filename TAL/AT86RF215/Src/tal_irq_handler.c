@@ -53,18 +53,12 @@ void trx_irq_handler_cb(void)
     uint8_t irqs_array[4];
 
     pal_dev_read(RF215_TRX, RG_RF09_IRQS, irqs_array, 4);
-    printf("irqs_array[0] = %d\n", irqs_array[0]);
-    printf("irqs_array[1] = %d\n", irqs_array[1]);
-    printf("irqs_array[2] = %d\n", irqs_array[2]);
-    printf("irqs_array[3] = %d\n", irqs_array[3]);
 
     /* Handle BB IRQS */
     for (trx_id_t trx_id = (trx_id_t)0; trx_id < NUM_TRX; trx_id++)
     {
-        printf("trx_id = %d\n", trx_id);
         if (tal_state[trx_id] == TAL_SLEEP)
         {
-            printf("TAL_SLEEP -> continue\n");
             continue;
         }
 
@@ -74,17 +68,14 @@ void trx_irq_handler_cb(void)
         {
             if (irqs & BB_IRQ_RXEM)
             {
-                printf("BB_IRQ_RXEM\n");
                 irqs &= (uint8_t)(~((uint32_t)BB_IRQ_RXEM)); // avoid Pa091
             }
             if (irqs & BB_IRQ_RXAM)
             {
-                printf("BB_IRQ_RXAM\n");
                 irqs &= (uint8_t)(~((uint32_t)BB_IRQ_RXAM)); // avoid Pa091
             }
             if (irqs & BB_IRQ_AGCR)
             {
-                printf("BB_IRQ_AGCR\n");
                
 #if ((defined RF215v1) || (defined RF215v2)) && (defined SUPPORT_LEGACY_OQPSK)
                 /* Workaround for errata reference #4908 */
@@ -95,7 +86,6 @@ void trx_irq_handler_cb(void)
             }
             if (irqs & BB_IRQ_AGCH)
             {
-                printf("BB_IRQ_AGCH\n");
 				
 #if ((defined RF215v1) || (defined RF215v2)) && (defined SUPPORT_LEGACY_OQPSK)
                 /* Workaround for errata reference #4908 */
@@ -106,7 +96,6 @@ void trx_irq_handler_cb(void)
             }
             if (irqs & BB_IRQ_RXFS)
             {
-                printf("BB_IRQ_RXFS\n");
                 
 #ifdef ENABLE_TSTAMP
                 pal_get_current_time(&fs_tstamp[trx_id]);
@@ -120,7 +109,6 @@ void trx_irq_handler_cb(void)
             }
             if (irqs & BB_IRQ_RXFE)
             {
-                printf("BB_IRQ_RXFE\n");
                 pal_get_current_time(&rxe_txe_tstamp[trx_id]);
 #if (defined RF215v1) 
                 /* Workaround for errata reference #4830 */
@@ -139,7 +127,6 @@ void trx_irq_handler_cb(void)
             }
             if (irqs & BB_IRQ_TXFE)
             {
-                printf("BB_IRQ_TXFE\n");
                 /* used for IFS and for MEASURE_ON_AIR_DURATION */
                 pal_get_current_time(&rxe_txe_tstamp[trx_id]);
             }
@@ -166,12 +153,10 @@ void trx_irq_handler_cb(void)
         {
             if (irqs & RF_IRQ_TRXRDY)
             {
-                printf("RF_IRQ_TRXRDY\n");
                 irqs &= (uint8_t)(~((uint32_t)RF_IRQ_TRXRDY)); // avoid Pa091
             }
             if (irqs & RF_IRQ_TRXERR)
             {
-                printf("RF_IRQ_TRXERR\n");
                 irqs &= (uint8_t)(~((uint32_t)RF_IRQ_TRXERR)); // avoid Pa091
             }
             tal_rf_irqs[trx_id] |= irqs;

@@ -22,6 +22,7 @@
 #include "tal.h"
 #include "app_common.h"
 #include "tal_internal.h"
+#include "timer.h"
 
 /* === MACROS ============================================================== */
 #define MAX_BUF 64
@@ -75,6 +76,11 @@ At86rf215_Dev_t at86rf215_dev={
 	.gpio_irq=&at86rf215_gpio_irq,
 	.gpio_rest=&at86rf215_gpio_rest
 };
+
+timer_handle_t *TAL_TIMER;
+timer_handle_t *TAL_ACK_TIMER;
+timer_handle_t *TAL_CALIBATION_TIMER;
+timer_handle_t *TAL_AGC_TIMER;
 
 /* === GLOBALS ============================================================= */
 
@@ -194,7 +200,6 @@ int main(int argc, char *argv[]){
 		}
         
 		if (fdset[1].revents & POLLIN) {
-            printf("Interrupt event trigger.\n");
             lseek(fdset[1].fd, 0, SEEK_SET);
             rd = read(fdset[1].fd, &event, sizeof(event));
             //if (rd == sizeof(event))
@@ -777,7 +782,5 @@ static void clean(void){
 void tal_tx_frame_done_cb(trx_id_t trx_id, retval_t status, frame_info_t *frame)
 {
 	chat_tx_done_cb(trx_id, status, frame);
-    printf("%s status = %d\n", __func__, status);
-    //print_all_register();
 }
 

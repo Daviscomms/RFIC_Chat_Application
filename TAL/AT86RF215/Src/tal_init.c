@@ -40,6 +40,10 @@
 #endif
 #include "mac_build_config.h"
 
+extern timer_handle_t *TAL_TIMER;
+extern timer_handle_t *TAL_ACK_TIMER;
+extern timer_handle_t *TAL_CALIBATION_TIMER;
+extern timer_handle_t *TAL_AGC_TIMER;
 /* === MACROS ============================================================== */
 
 /* === GLOBALS ============================================================= */
@@ -468,12 +472,18 @@ static void cleanup_tal(trx_id_t trx_id)
     ENTER_CRITICAL_REGION();
 
     /* Traverse through all timer ids. */
+    /*
     for (tal_timer_id_t timer_id = (tal_timer_id_t)TAL_FIRST_TIMER_ID;
          timer_id <= TAL_LAST_TIMER_ID;
          timer_id++)
     {
         pal_timer_stop(timer_id, trx_id);
     }
+    */
+    pal_timer_stop(&TAL_TIMER, trx_id);
+    pal_timer_stop(&TAL_ACK_TIMER, trx_id);
+    pal_timer_stop(&TAL_CALIBATION_TIMER, trx_id);
+    pal_timer_stop(&TAL_AGC_TIMER, trx_id);
 
     LEAVE_CRITICAL_REGION();
 

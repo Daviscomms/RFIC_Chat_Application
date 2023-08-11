@@ -31,6 +31,10 @@
 #include "tal_internal.h"
 #include <signal.h> 
 
+extern timer_handle_t *TAL_TIMER;
+extern timer_handle_t *TAL_ACK_TIMER;
+extern timer_handle_t *TAL_CALIBATION_TIMER;
+extern timer_handle_t *TAL_AGC_TIMER;
 /* === TYPES =============================================================== */
 
 /* === MACROS ============================================================== */
@@ -59,7 +63,6 @@ static void ack_timout_cb(union sigval v);
  */
 void ack_transmission_done(trx_id_t trx_id)
 {
-    printf("%s\n", __func__);
     ack_transmitting[trx_id] = false;
 
 #ifdef SUPPORT_FSK
@@ -170,16 +173,15 @@ void start_ack_wait_timer(trx_id_t trx_id)
     tx_state[trx_id] = TX_WAITING_FOR_ACK;
 
     retval_t status =
-        pal_timer_start(TAL_T,
+        pal_timer_start(&TAL_ACK_TIMER,
                         trx_id,
                         tal_pib[trx_id].ACKWaitDuration,
-                        TIMEOUT_RELATIVE,
+                        TIMER_TYPE_ONESHORT,
                         (FUNC_PTR())ack_timout_cb,
                         NULL);
 	ASSERT(status == MAC_SUCCESS);
     if (status != MAC_SUCCESS)
     {
-        printf("!=MAC_SUCCESS\n");
         CALC_REG_OFFSET(trx_id);
         pal_dev_reg_write(RF215_TRX, GET_REG_ADDR(RG_RF09_CMD), RF_TRXOFF);
         trx_state[trx_id] = RF_TRXOFF;

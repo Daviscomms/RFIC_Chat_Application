@@ -30,6 +30,10 @@
 #include <signal.h>  
 #include <time.h> 
 
+extern timer_handle_t *TAL_TIMER;
+extern timer_handle_t *TAL_ACK_TIMER;
+extern timer_handle_t *TAL_CALIBATION_TIMER;
+extern timer_handle_t *TAL_AGC_TIMER;
 #if (defined SUPPORT_FSK) && (defined SUPPORT_MODE_SWITCH)
 
 /* === TYPES =============================================================== */
@@ -339,10 +343,10 @@ void prepare_actual_transmission(trx_id_t trx_id)
     pal_get_current_time(&now);
     uint32_t diff = tal_pib[trx_id].ModeSwitchSettlingDelay - (now - rxe_txe_tstamp[trx_id]);
     retval_t status =
-        pal_timer_start(TAL_T,
+        pal_timer_start(&TAL_TIMER,
                         trx_id,
                         diff,
-                        TIMEOUT_RELATIVE,
+                        TIMER_TYPE_ONESHORT,
                         (FUNC_PTR())tx_actual_frame,
                         NULL);
 
@@ -627,10 +631,10 @@ void handle_rx_ms_packet(trx_id_t trx_id)
             tal_state[trx_id] = TAL_NEW_MODE_RECEIVING;
 
             /* Start timer to cancel receiving at new mode again - in case no frame is received. */
-            pal_timer_start(TAL_T,
+            pal_timer_start(&TAL_TIMER,
                             trx_id,
                             tal_pib[trx_id].ModeSwitchDuration,
-                            TIMEOUT_RELATIVE,
+                            TIMER_TYPE_ONESHORT,
                             (FUNC_PTR())cancel_new_mode_reception,
                             NULL);
         }
@@ -659,7 +663,8 @@ void handle_rx_ms_packet(trx_id_t trx_id)
 static void cancel_new_mode_reception(union sigval v)
 {
     /* Immediately store trx id from callback. */
-    trx_id_t trx_id = (trx_id_t)(cb_timer_element->timer_instance_id);
+    //trx_id_t trx_id = (trx_id_t)(cb_timer_element->timer_instance_id);
+    trx_id_t trx_id = (trx_id_t)(v.sival_int);
     ASSERT((trx_id >= 0) && (trx_id < NUM_TRX));
 
     /* Restore previous PHY, i.e. CSM */

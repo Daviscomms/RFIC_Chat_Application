@@ -22,6 +22,7 @@
 /* === Includes ============================================================= */
 
 #include "pal_types.h"
+#include <stdbool.h>
 #if (PAL_GENERIC_TYPE == MEGA_RF) || (PAL_GENERIC_TYPE == SAM4) || (PAL_GENERIC_TYPE == SAMR)
 #   include "pal_timer_hw.h"
 #elif (PAL_GENERIC_TYPE == IMX6SX)

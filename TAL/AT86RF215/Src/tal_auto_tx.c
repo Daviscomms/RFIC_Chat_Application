@@ -295,8 +295,6 @@ void transmit_frame(trx_id_t trx_id, cca_use_t cca)
             frame_buf_filled[trx_id] = true;
         }
     }
-    //printf("Trasmit frame.\n");
-    //print_all_register();
 }
 
 
@@ -307,7 +305,6 @@ void transmit_frame(trx_id_t trx_id, cca_use_t cca)
  */
 void handle_tx_end_irq(trx_id_t trx_id)
 {
-    printf("handle_tx_end_irq ack_transmitting[trx_id] = %d\n", ack_transmitting[trx_id]);
     /* ACK transmission completed */
     if (ack_transmitting[trx_id])
     {
