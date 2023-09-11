@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-
 typedef struct spi_tag{
 	char *name;
 	uint8_t mode;

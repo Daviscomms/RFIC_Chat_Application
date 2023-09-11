@@ -58,6 +58,7 @@ LIBS += -lgpiod
 
 OBJECTS = \
 	$(TARGET_DIR)/main.o\
+	$(TARGET_DIR)/i2c.o\
 	$(TARGET_DIR)/spi.o\
 	$(TARGET_DIR)/gpio.o\
 	$(TARGET_DIR)/timer.o\
@@ -124,6 +125,8 @@ $(TARGET_DIR)/tal_rand.o: $(PATH_TAL)/$(_TAL_TYPE)/Src/tal_rand.c
 	$(CC) -c $(CFLAGS) $(INCLUDES) -o $@ $<
 $(TARGET_DIR)/pal_trx_spi_block_mode.o: $(PATH_PAL)/Src/pal_trx_spi_block_mode.c
 	$(CC) -c $(CFLAGS) $(INCLUDES) -o $@ $<
+$(TARGET_DIR)/i2c.o: $(PATH_PAL)/Src/i2c.c
+	$(CC) -c $(CFLAGS) $(INCLUDES) -o $@ $<
 $(TARGET_DIR)/spi.o: $(PATH_PAL)/Src/spi.c
 	$(CC) -c $(CFLAGS) $(INCLUDES) -o $@ $<
 $(TARGET_DIR)/gpio.o: $(PATH_PAL)/Src/gpio.c
@@ -144,6 +147,7 @@ Main:
 	make $(TARGET_DIR)/main.o
 .PHONY:Pal
 Pal:
+	make $(TARGET_DIR)/i2c.o
 	make $(TARGET_DIR)/spi.o
 	make $(TARGET_DIR)/gpio.o
 	make $(TARGET_DIR)/timer.o

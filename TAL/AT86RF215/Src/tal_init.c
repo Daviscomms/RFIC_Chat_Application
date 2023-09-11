@@ -39,6 +39,7 @@
 #include "tfa.h"
 #endif
 #include "mac_build_config.h"
+#include "i2c.h"
 
 extern timer_handle_t *TAL_TIMER;
 extern timer_handle_t *TAL_ACK_TIMER;
@@ -375,9 +376,16 @@ printf("trx_reset run\n");
         TAL_RF_IRQ_CLR_ALL(RF24);
 
         /* Apply reset pulse; low active */
-        PAL_DEV_RST_LOW(RF215_TRX);
-        PAL_WAIT_1_US();
-        PAL_DEV_RST_HIGH(RF215_TRX);
+        //PAL_DEV_RST_LOW(RF215_TRX);
+        //PAL_WAIT_1_US();
+        //PAL_DEV_RST_HIGH(RF215_TRX);
+
+        /* Applied reset to RFIC */
+        for (uint8_t i = (trx_id_t)0; i < NUM_TRX; i++)
+        {
+            CALC_REG_OFFSET(i);
+            pal_dev_reg_write(RF215_TRX, GET_REG_ADDR(RG_RF09_CMD), RF_RESET);
+        }
     }
     else // only a single trx_id; i.e. RF09 or RF24
     {

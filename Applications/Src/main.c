@@ -23,6 +23,7 @@
 #include "app_common.h"
 #include "tal_internal.h"
 #include "timer.h"
+#include "i2c.h"
 
 /* === MACROS ============================================================== */
 #define MAX_BUF 64
@@ -32,20 +33,20 @@
 #define MOD_2_4G        LEG_OQPSK
 
 spi_t at86rf215_spi={
-	.name="/dev/spidev2.0",
+	.name="/dev/spidev1.0",
 	.mode=0,
 	.bits=8,
-	.speed=15000000,
+	.speed=5000000,
 	.delay=0,
 	.fd=-1
 
 };
 
 spi_t at86rf215_spi_test={
-	.name="/dev/spidev2.0",
+	.name="/dev/spidev1.0",
 	.mode=0,
 	.bits=8,
-	.speed=15000000,
+	.speed=25000000,
 	.delay=0,
 	.fd=-1
 
@@ -161,6 +162,42 @@ void print_all_register()
     printf("End to print register.\n");
 }
 
+void select_rfic_1_spi_channel()
+{
+    int ret = 0;
+    int ret_value = 0;
+    uint8_t i2c_to_gpio_address_1 = 0x24;
+    uint8_t i2c_to_gpio_address_2 = 0x25;
+
+    int fd = i2c_open("/dev/i2c-2");
+    if (fd < 0)
+    {
+        printf("Unable to open /dev/i2c-2\n");
+        return;
+    }
+
+    ret = i2c_write(fd, 0x26, 0x01);
+    if (ret < 0)
+    {
+        printf("Unable to perform I2C Write.\n");
+        goto exit;
+    }
+
+    ret = i2c_read(fd, 0x26);
+    printf("I2C-to-GPIO read back register value = 0x%X\n", ret);
+    if (ret < 0)
+    {
+        printf("Unable to perform I2C Read.\n");
+        goto exit;
+    }
+
+    return;
+
+exit:
+    i2c_close(fd);
+}
+
+
 int main(int argc, char *argv[]){
 	int nfds = 2;
 	struct pollfd fdset[2];
@@ -172,6 +209,13 @@ int main(int argc, char *argv[]){
 	atexit(clean);
 
     //print_all_register();
+
+    gpiod_ctxless_set_value_ext(at86rf215_gpio_rest.name, at86rf215_gpio_rest.pin, 1, false, "gpio_rst_rf_b", NULL, NULL, GPIOD_CTXLESS_FLAG_BIAS_DISABLE);
+    usleep(1000000);
+    gpiod_ctxless_set_value_ext(at86rf215_gpio_rest.name, at86rf215_gpio_rest.pin, 0, false, "gpio_rst_rf_b", NULL, NULL, GPIOD_CTXLESS_FLAG_BIAS_DISABLE);
+    
+    select_rfic_1_spi_channel();
+    usleep(1000000);
 
 	/* Initialize the TAL layer */	
     if (tal_init() != MAC_SUCCESS){
