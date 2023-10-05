@@ -53,8 +53,8 @@ spi_t at86rf215_spi_test={
 };
 
 gpio_t at86rf215_gpio_irq={
-	.name="/dev/gpiochip5",
-	.pin=8,
+	.name="/dev/gpiochip0",
+	.pin=0,
     .fd=-1,
     .req_fd=-1,
 	.direction=IN,
@@ -63,8 +63,8 @@ gpio_t at86rf215_gpio_irq={
 };
 
 gpio_t at86rf215_gpio_rest={
-    .name="/dev/gpiochip5",
-	.pin=9,
+    .name="/dev/gpiochip0",
+	.pin=5,
     .fd=-1,
     .req_fd=-1,
 	.direction=OUT,
@@ -169,10 +169,10 @@ void select_rfic_1_spi_channel()
     uint8_t i2c_to_gpio_address_1 = 0x24;
     uint8_t i2c_to_gpio_address_2 = 0x25;
 
-    int fd = i2c_open("/dev/i2c-2");
+    int fd = i2c_open("/dev/i2c-3");
     if (fd < 0)
     {
-        printf("Unable to open /dev/i2c-2\n");
+        printf("Unable to open /dev/i2c-3\n");
         return;
     }
 
@@ -209,6 +209,10 @@ int main(int argc, char *argv[]){
 	atexit(clean);
 
     //print_all_register();
+    gpiod_ctxless_set_value_ext("gpiochip0", 8, 1, false, "gpio_RBE", NULL, NULL, GPIOD_CTXLESS_FLAG_BIAS_DISABLE);
+    usleep(1000000);
+    gpiod_ctxless_set_value_ext("gpiochip0", 9, 1, false, "gpio_RF_1V2_EN", NULL, NULL, GPIOD_CTXLESS_FLAG_BIAS_DISABLE);
+    usleep(1000000);
 
     gpiod_ctxless_set_value_ext(at86rf215_gpio_rest.name, at86rf215_gpio_rest.pin, 1, false, "gpio_rst_rf_b", NULL, NULL, GPIOD_CTXLESS_FLAG_BIAS_DISABLE);
     usleep(1000000);
