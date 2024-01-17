@@ -169,10 +169,12 @@ void select_rfic_1_spi_channel()
     uint8_t i2c_to_gpio_address_1 = 0x24;
     uint8_t i2c_to_gpio_address_2 = 0x25;
 
-    int fd = i2c_open("/dev/i2c-3");
+    int fd = i2c_open("/dev/i2c-2");
+    printf("Open /dev/i2c-2\n");
+    
     if (fd < 0)
     {
-        printf("Unable to open /dev/i2c-3\n");
+        printf("Unable to open /dev/i2c-2\n");
         return;
     }
 
