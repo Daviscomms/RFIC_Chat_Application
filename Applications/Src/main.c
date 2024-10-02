@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include <getopt.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
@@ -26,7 +27,7 @@
 #include "i2c.h"
 
 /* === MACROS ============================================================== */
-#define MAX_BUF 64
+#define MAX_BUF 2001
 
 /* Default modulation */
 #define MOD_SUB1        OQPSK
@@ -36,7 +37,7 @@ spi_t at86rf215_spi={
 	.name="/dev/spidev1.0",
 	.mode=0,
 	.bits=8,
-	.speed=5000000,
+	.speed=2500000,
 	.delay=0,
 	.fd=-1
 
@@ -44,14 +45,15 @@ spi_t at86rf215_spi={
 
 spi_t at86rf215_spi_test={
 	.name="/dev/spidev1.0",
-	.mode=0,
+	.mode=1,
 	.bits=8,
-	.speed=25000000,
+	.speed=2500000,
 	.delay=0,
 	.fd=-1
 
 };
 
+// Pin is 0, 1, 6, 7 for 4 RFIC
 gpio_t at86rf215_gpio_irq={
 	.name="/dev/gpiochip0",
 	.pin=0,
@@ -93,6 +95,10 @@ modulation_t current_mod[NUM_TRX];
 trx_id_t current_trx_id = (trx_id_t)0;
 
 
+unsigned int g_TR01_Mixer = 0, g_TR01_MixerTxRx = 0, g_TR01_MixerPath = 0;
+int g_TR01_LoopTxCount = 0;
+
+
 static void clean(void);
 /* === PROTOTYPES ========================================================== */
 
@@ -104,6 +110,18 @@ static void switch_tx_band(trx_id_t id);
 static void handle_menu(void);
 static char *get_preset_text(uint8_t preset);
 #endif
+
+void mixer_config(void);
+
+void mixer_freq_test(void);
+
+void mixer_spi_read(uint8_t wReg, uint8_t *out);
+
+void mixer_i2c_config(
+	unsigned yMixer,
+	bool bWrite
+);
+
 
 void print_all_register()
 {
@@ -193,8 +211,6 @@ void select_rfic_1_spi_channel()
         goto exit;
     }
 
-    return;
-
 exit:
     i2c_close(fd);
 }
@@ -204,12 +220,19 @@ int main(int argc, char *argv[]){
 	int nfds = 2;
 	struct pollfd fdset[2];
 	char buf[MAX_BUF];
+	char fixtext[MAX_BUF];
 	int ret;
 	int len;
     ssize_t rd;
     struct gpioevent_data event;
 	atexit(clean);
 
+	memset(buf, 0x0, sizeof(buf));
+	for (len = 0; len < 20; len++)
+	{
+		strcat(buf, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwx");
+	}
+	
     //print_all_register();
     gpiod_ctxless_set_value_ext("gpiochip0", 8, 1, false, "gpio_RBE", NULL, NULL, GPIOD_CTXLESS_FLAG_BIAS_DISABLE);
     usleep(1000000);
@@ -263,13 +286,22 @@ int main(int argc, char *argv[]){
 
         tal_task();
 
-		if (fdset[0].revents & POLLIN) {
-			len=read(fdset[0].fd, buf, MAX_BUF);
-			buf[len-1]='\0';
-			app_task(buf);
+		if (get_loop_tx() == false)
+		{
+			if (fdset[0].revents & POLLIN) {
+				len=read(fdset[0].fd, buf, MAX_BUF);
+				buf[len-1]='\0';
+				app_task(buf);
+			}
+			fflush(stdout);
 		}
-		fflush(stdout);
+		else
+		{
+			get_chat_input(fixtext);
+		}
 	}
+	
+	return 0;
 }
 
 
@@ -322,6 +354,32 @@ static void app_task(char* input)
 	}
 	else if(strcmp(input,"/2.4G")==0){
 		switch_tx_band(RF24);
+	}
+	else if (strcmp(input, "/freq") == 0)
+	{
+		mixer_freq_test();
+
+		select_rfic_1_spi_channel();
+	    usleep(1000000);
+	}
+	else if (strncmp(input, "/loop", 5) == 0)
+	{
+		if (input[5] != 0)
+		{
+			g_TR01_LoopTxCount = atoi(&input[5]);
+
+			if (g_TR01_LoopTxCount == 0)
+			{
+				printf("\n**The loop number is invalid**");
+				return;
+			}
+		}
+		else
+		{
+			g_TR01_LoopTxCount = 0;
+		}
+
+		set_loop_tx(g_TR01_LoopTxCount);
 	}
 	else{
 		get_chat_input(input);
@@ -833,4 +891,394 @@ void tal_tx_frame_done_cb(trx_id_t trx_id, retval_t status, frame_info_t *frame)
 {
 	chat_tx_done_cb(trx_id, status, frame);
 }
+
+
+void mixer_config(void)
+{
+	char pInput[100], *pResult = NULL;
+	uint8_t ret_value = 0;
+
+	printf("Select the mixer(1/2):");
+
+	memset(pInput, 0x0, sizeof(pInput));
+	pResult = fgets(pInput, sizeof(pInput), stdin);
+
+	if (pInput[1] != 0x0A ||
+		pInput[0] < '1' ||
+		pInput[0] > '2')
+	{
+		printf("Please select the correct mixer\n");
+		return;
+	}
+
+	g_TR01_Mixer = pInput[0] - '0';
+
+	printf("Choose the Tx/Rx for mixer[1/0]:");
+
+	memset(pInput, 0x0, sizeof(pInput));
+	pResult = fgets(pInput, sizeof(pInput), stdin);
+
+	if (pInput[1] != 0x0A ||
+		pInput[0] < '0' ||
+		pInput[0] > '1')
+	{
+		printf("Please choose the correct option for Tx/Rx\n");
+		return;
+	}
+
+	g_TR01_MixerTxRx = pInput[0] - '0';
+
+	printf("Select the channel path(1/2):");
+
+	memset(pInput, 0x0, sizeof(pInput));
+	pResult = fgets(pInput, sizeof(pInput), stdin);
+
+	if (pInput[1] != 0x0A ||
+		pInput[0] < '1' ||
+		pInput[0] > '2')
+	{
+		printf("Plase enter the correct path.\n");
+		return;
+	}
+
+	g_TR01_MixerPath = pInput[0] - '1';
+}
+
+
+void mixer_freq_test(void)
+{
+	int ret = 0;
+	uint8_t ret_value = 0, yCount = 0;
+	uint8_t in[10], out[10];
+	char pInput[100], *pResult = NULL;
+
+	unsigned int wValue = 0, wReadWrite = 0;
+	unsigned int wfbkdiv = 2, wlodiv = 0, wn_div, wnum_msb, wnum_lsb;
+	double wFreq = 0, wfvco, fn_div, flodiv, fnum_msb, fnum_lsb;
+
+	mixer_config();
+
+	printf("Input the frequency(600-4200):");
+	
+	memset(pInput, 0x0, sizeof(pInput));
+	pResult = fgets(pInput, sizeof(pInput), stdin);
+
+	wFreq = strtol(pInput, &pResult, 10);
+	
+	if (wFreq < 600 ||
+		wFreq > 4200)
+	{
+		printf("Please enter the correct frequency.\n");
+		return;
+	}
+
+	if (g_TR01_Mixer == 0)
+	{
+		g_TR01_Mixer = 1;
+	}
+
+	if (wFreq > 1495 &&
+		g_TR01_Mixer == 1)
+	{
+		g_TR01_Mixer = 0;
+	}
+
+	mixer_i2c_config(g_TR01_Mixer, g_TR01_MixerTxRx);
+
+	while(1)
+	{
+		yCount++;
+
+		if (yCount > 3)
+		{
+			printf("Retry 3 times to lock frequency failed\n");
+			break;
+		}
+
+		//ret = spi_init(&spi, "/dev/spidev1.0", 0, 0, 2500000);
+
+		/*if (ret)
+		{
+			printf("Unabled to init SPI.\n");
+			return;
+		}*/
+
+		flodiv = 5400 / wFreq;
+		flodiv = log2(flodiv);
+		wlodiv = (unsigned int)flodiv;
+		printf("Lodiv: %.2f - %d\n", flodiv, wlodiv);
+
+		wfvco = wFreq * pow(2, wlodiv);
+
+		if (wfvco > 3200)
+		{
+			wfbkdiv = 4;
+		}
+
+		fn_div = (double)wfvco / (double)wfbkdiv;
+		fn_div /= 26;
+		wn_div = (unsigned int)fn_div;
+		printf("n_div:%.2f - %d\n", fn_div, wn_div);
+
+		fnum_msb = (fn_div * 1000) - (wn_div * 1000);
+		fnum_msb /= 1000;
+		fnum_msb *= 65536;
+		wnum_msb = (unsigned int)fnum_msb;
+		printf("num_msb:%.2f - %d\n", fnum_msb, wnum_msb);
+
+		fnum_lsb = (fnum_msb * 1000) - (wnum_msb * 1000);
+		fnum_lsb /= 1000;
+		fnum_lsb *= 256;
+		wnum_lsb = (unsigned int)fnum_lsb;
+		printf("num_lsb:%d\n", wnum_lsb);
+
+		// reset mixer
+		wValue = 2;
+		printf("Reset mixer with Reg 0x15 and Value 0x02\n");
+
+		in[0] = 0x15;
+		in[1] = (wValue >> 8);
+		in[2] = (wValue & 0xFF);
+
+		ret = spi_mixer_write(at86rf215_dev.spi, in, 3);
+		if (ret >= 0)
+		{
+			printf("Write SPI data for reg %.2X success\n", in[0]);
+		}
+		else
+		{
+			printf("Write SPI data failed %d\n", ret);
+			continue;
+		}
+
+		usleep(800000);
+
+		// reg 1
+		wValue = (wn_div << 7) + (wlodiv << 4) + ((wfbkdiv / 2) << 2);
+		printf("Reg 0x0C value:%.4X\n", wValue);
+
+		// SPI write
+		in[0] = 0x0C + (g_TR01_MixerPath * 3);
+		in[1] = (wValue >> 8);
+		in[2] = (wValue & 0xFF);
+
+		ret = spi_mixer_write(at86rf215_dev.spi, in, 3);
+		if (ret >= 0)
+		{
+			printf("Write SPI data for reg %.2X success\n", in[0]);
+		}
+		else
+		{
+			printf("Write SPI data failed %d\n", ret);
+			continue;
+		}
+
+		usleep(800000);
+
+		// reg 2
+		printf("Reg 0x0D value:%.4X\n", wnum_msb);
+
+		in[0] = 0x0D + (g_TR01_MixerPath * 3);
+		in[1] = (wnum_msb >> 8);
+		in[2] = (wnum_msb & 0xFF);
+
+		ret = spi_mixer_write(at86rf215_dev.spi, in, 3);
+		if (ret >= 0)
+		{
+			printf("Write SPI data for reg %.2X success\n", in[0]);
+		}
+		else
+		{
+			printf("Write SPI data failed %d\n", ret);
+			continue;
+		}
+
+		usleep(800000);
+
+		// reg 3
+		printf("Reg 0x0E value:%.4X\n", wnum_lsb << 8);
+
+		in[0] = 0x0E + (g_TR01_MixerPath * 3);
+		in[1] = (wnum_lsb >> 8);
+		in[2] = (wnum_lsb & 0xFF);
+
+		ret = spi_mixer_write(at86rf215_dev.spi, in, 3);
+		if (ret >= 0)
+		{
+			printf("Write SPI data for reg %.2X success\n", in[0]);
+		}
+		else
+		{
+			printf("Write SPI data failed %d\n", ret);
+			continue;
+		}
+
+		usleep(800000);
+
+		// Enable mixer
+		wValue = 0xC000 | (g_TR01_MixerPath << 13);
+		printf("Enable mixer with register 0x15 and value %.4X\n", wValue);
+
+		in[0] = 0x15;
+		in[1] = (wValue >> 8);
+		in[2] = (wValue & 0xFF);
+
+		ret = spi_mixer_write(at86rf215_dev.spi, in, 3);
+		if (ret >= 0)
+		{
+			printf("Write SPI data for reg %.2X success\n", in[0]);
+		}
+		else
+		{
+			printf("Write SPI data failed %d\n", ret);
+			continue;
+		}
+
+		usleep(800000);
+		mixer_spi_read(0x1F, out);
+
+		if ((out[1] >> 7) == 1)
+		{
+			printf("Frequency is locked\n");
+			break;
+		}
+	}
+}
+
+
+void mixer_spi_read(uint8_t wReg, uint8_t *out)
+{
+	int ret = 0;
+	uint8_t in[10];
+
+	// Open the SPI with the mode 1
+	ret = spi_init(&at86rf215_spi_test);
+	
+	if (ret < 0)
+	{
+		printf("Init read SPI failed\n");
+	}
+
+	memset(out, 0x0, 3);
+	in[0] = wReg | 0x80;
+
+	ret = spi_mixer_exchange(&at86rf215_spi_test, out, in, 3);
+	printf("The read back value for reg 0x%.2X: 0x%.2X, 0x%.2X, 0x%.2X and result is %d\n", wReg, out[0], out[1], out[2], ret);
+	
+	usleep(800000);
+	
+	in[0] = 0xFF;
+	ret = spi_mixer_exchange(&at86rf215_spi_test, out, in, 3);
+	printf("The read back value for reg 0x%.2X: 0x%.2X, 0x%.2X, 0x%.2X and result is %d\n", in[0], out[0], out[1], out[2], ret);
+	
+	close(at86rf215_spi_test.fd);
+	at86rf215_spi_test.fd = 0;
+}
+
+
+void mixer_i2c_config(
+	unsigned yMixer,
+	bool bWrite
+)
+{
+	int ret = 0;
+	uint8_t ret_value = 0;
+	uint8_t wReg24 = 0x0c, wReg25 = 0x04, wReg26 = 0x10;
+
+	if (g_TR01_Mixer == 1)
+	{
+		if (bWrite == false)
+		{
+			wReg24 = 0x40;
+			wReg25 = 0x08;
+		}
+	}
+	else if (g_TR01_Mixer == 0)
+	{
+		if (bWrite == false)
+		{
+			wReg24 = 0x0C;
+			wReg25 = 0x08;
+		}
+		else
+		{
+			wReg24 = 0x4C;
+		}
+	}
+	else
+	{
+		if (bWrite == false)
+		{
+			wReg24 = 0x00;
+			wReg25 = 0x20;
+		}
+		else
+		{
+			wReg24 = 0xB0;
+			wReg25 = 0x10;
+		}
+	}
+
+	// I2C Init
+    int fd = i2c_open("/dev/i2c-2");
+    if (fd < 0)
+    {
+        printf("Unable to open /dev/i2c-2\n");
+        return;
+    }
+
+	// Turn on mixer 1
+	if (yMixer == 2)
+	{
+		wReg26 <<= 1;
+	}
+
+	printf("I2C register 0x26 Value %.2X\n", wReg26);
+
+	ret = i2c_write(fd, 0x26, wReg26);
+	if (ret < 0)
+	{
+		printf("Unable to perform I2C Write.\n");
+		goto exit;
+	}
+
+	ret_value = i2c_read(fd, 0x26);
+	printf("I2C-to-GPIO read back register value = 0x%.2X\n", ret_value);
+
+	// second I2C
+	printf("I2C register 0x24 Value %.2X\n", wReg24);
+
+	ret = i2c_write(fd, 0x24, wReg24);
+	if (ret < 0)
+	{
+		printf("Unable to perform I2C Write.\n");
+		goto exit;
+	}
+
+	ret_value = i2c_read(fd, 0x24);
+	printf("I2C-to-GPIO read back register value = 0x%.2X\n", ret_value);
+
+	// Third I2C
+	printf("I2C register 0x25 Value %.2X\n", wReg25);
+
+	ret = i2c_write(fd, 0x25, wReg25);
+	if (ret < 0)
+	{
+		printf("Unable to perform I2C Write.\n");
+		goto exit;
+	}
+
+	ret_value = i2c_read(fd, 0x25);
+	printf("I2C-to-GPIO read back register value = 0x%.2X\n", ret_value);
+
+	if (ret_value < 0)
+	{
+		printf("Unable to perform I2C Read.\n");
+		ret = -1;
+	}
+
+exit:
+	i2c_close(fd);
+}
+
 

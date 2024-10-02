@@ -145,4 +145,57 @@ uint8_t spi_reg_bit_write(spi_t* spi,uint16_t address,uint8_t mask,uint8_t pos,u
 }
 
 
+int spi_mixer_write(spi_t *self, const uint8_t *tx_buf, size_t len)
+{
+    int retv;
+    struct spi_ioc_transfer xfer;
+
+    xfer.tx_buf = (unsigned long) tx_buf;
+    xfer.rx_buf = (unsigned long) 0;
+    xfer.len = len;
+    xfer.delay_usecs = 0;
+    xfer.speed_hz = self->speed;
+    xfer.bits_per_word = self->bits;
+
+    retv = ioctl(self->fd, SPI_IOC_MESSAGE(1), &xfer);
+    if (retv < 1)
+    {
+        printf("Error in spi_write(): ioctl(SPI_IOC_MESSAGE(1)) return %d\n", retv);
+    }
+
+    return retv;
+}
+
+/**
+ *  A detailed description of the spi_exchange function
+ *
+ *  This function is to perform write and read from spi device and return result
+ *
+ *  @param \*self - spi device in struct of spi_t
+ *  @param \*rx_buf - receive buffer
+ *  @param \*tx_buf - transmit buffer
+ *  @param len - size of the buffer
+ *  @return - number of write bytes on success, else return SPI_ERR_EXCHANGE(-11) on error
+ */
+int spi_mixer_exchange(spi_t *self, uint8_t *rx_buf, const uint8_t *tx_buf, size_t len)
+{
+    int retv;
+    struct spi_ioc_transfer xfer;
+
+    xfer.tx_buf = (unsigned long) tx_buf;
+    xfer.rx_buf = (unsigned long) rx_buf;
+    xfer.len = len;
+    xfer.delay_usecs = 0;
+    xfer.speed_hz = self->speed;
+    xfer.bits_per_word = self->bits;
+
+    retv = ioctl(self->fd, SPI_IOC_MESSAGE(1), &xfer);
+    if (retv < 0)
+    {
+        printf("Error in spi_exchange(): ioctl(SPI_IOC_MESSAGE(1)) return %d\n", retv);
+    }
+
+    return retv;
+}
+
 

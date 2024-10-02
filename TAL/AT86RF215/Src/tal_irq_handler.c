@@ -99,6 +99,7 @@ void trx_irq_handler_cb(void)
                 
 #ifdef ENABLE_TSTAMP
                 pal_get_current_time(&fs_tstamp[trx_id]);
+				printf("\n%d - RX detected", fs_tstamp[trx_id]);
 #endif
 #if ((defined RF215v1) || (defined RF215v2)) && (defined SUPPORT_LEGACY_OQPSK)
                 /* Workaround for errata reference #4908 */

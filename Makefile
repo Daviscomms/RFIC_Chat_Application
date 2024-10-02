@@ -86,7 +86,7 @@ OBJECTS = \
 	$(TARGET_DIR)/chat.o
 
 $(TARGET_DIR)/$(TARGET):$(OBJECTS)
-	$(CC)  -o $@ $^ $(LIBS) -lrt
+	$(CC)  -o $@ $^ $(LIBS) -lrt -lm
 $(TARGET_DIR)/bmm.o: $(PATH_RES)/Buffer_Management/Src/bmm.c
 	$(CC) -c $(CFLAGS) $(INCLUDES) -o $@ $<
 $(TARGET_DIR)/qmm.o: $(PATH_RES)/Queue_Management/Src/qmm.c

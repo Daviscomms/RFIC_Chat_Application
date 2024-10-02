@@ -45,6 +45,10 @@ uint8_t tx_hdr_len;
 uint8_t crc_len[2];
 #endif
 
+uint8_t g_Chat_Looptx = false;
+int g_Chat_LoopTxCounter = 0, g_Chat_LoopTxMax = 0;
+
+
 /* === PROTOTYPES ========================================================== */
 
 /* === IMPLEMENTATION ====================================================== */
@@ -258,7 +262,7 @@ void chat_handle_incoming_frame(trx_id_t trx_id, frame_info_t *rx_frame)
     }
 
     printf("\n");
-    printf("> ");
+    printf("\n%d - RX finish\n> ", rx_frame->time_stamp);
     fflush(stdout);
 
     /* Keep compiler happy */
@@ -344,8 +348,26 @@ void chat_tx_done_cb(trx_id_t trx_id, retval_t status, frame_info_t *frame)
         printf(STATUS_TEXT);
     }
 
-    printf("\n> ");
-    fflush(stdout);
+	if (g_Chat_Looptx == false)
+	{
+	    printf("%d - TX finish\n> ", frame->time_stamp);
+    	fflush(stdout);
+	}
+	else
+	{
+		g_Chat_LoopTxCounter++;
+		printf("\nTx Counter: %d", g_Chat_LoopTxCounter);
+
+		if (g_Chat_LoopTxCounter == g_Chat_LoopTxMax)
+		{
+			g_Chat_Looptx = false;
+			g_Chat_LoopTxCounter = 0;
+			g_Chat_LoopTxMax = 0;
+
+			printf("\n%d - TX finish\n> ", frame->time_stamp);
+	    	fflush(stdout);
+		}
+	}
 
     chat_pay_ptr = tx_frm_pay_ptr;
     input_len = 0;
@@ -356,5 +378,16 @@ void chat_tx_done_cb(trx_id_t trx_id, retval_t status, frame_info_t *frame)
 }
 
 
+void set_loop_tx(int nCount)
+{
+	g_Chat_Looptx = true;
+	g_Chat_LoopTxMax = nCount;
+}
+
+
+uint8_t get_loop_tx(void)
+{
+	return g_Chat_Looptx;
+}
 
 /* EOF */

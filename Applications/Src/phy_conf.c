@@ -116,7 +116,7 @@ retval_t set_fsk(trx_id_t trx_id)
         phy.freq_band = US_915;
         phy.ch_spacing = FSK_915_MOD1_CH_SPAC;
         phy.freq_f0 = FSK_915_MOD1_F0;
-        pwr = 14;
+        pwr = 8;
     }
     else // RF24
     {
@@ -124,9 +124,9 @@ retval_t set_fsk(trx_id_t trx_id)
         phy.ch_spacing = FSK_2450_MOD1_CH_SPAC;
         phy.freq_f0 = FSK_2450_MOD1_F0;
 #ifdef RF215v1
-        pwr = 12;
+        pwr = 8;
 #else
-        pwr = 14;
+        pwr = 8;
 #endif
     }
 
@@ -234,7 +234,7 @@ retval_t set_ofdm(trx_id_t trx_id)
     }
 
     /* Set data rate / MCS */
-    ofdm_mcs_t mcs = MCS3;
+    ofdm_mcs_t mcs = MCS6;
     status = tal_pib_set(trx_id, phyOFDMMCS, (pib_value_t *)&mcs);
     if (status != MAC_SUCCESS)
     {
@@ -265,7 +265,7 @@ retval_t set_ofdm(trx_id_t trx_id)
     }
 
     /* Set transmit power */
-    int pwr = 14;
+    int pwr = 8;
     status = tal_pib_set(trx_id, phyTransmitPower, (pib_value_t *)&pwr);
     if (status != MAC_SUCCESS)
     {
@@ -337,7 +337,7 @@ retval_t set_oqpsk(trx_id_t trx_id)
     }
 
     /* Set transmit power */
-    int pwr = 14;
+    int pwr = 8;
     status = tal_pib_set(trx_id, phyTransmitPower, (pib_value_t *)&pwr);
     if (status != MAC_SUCCESS)
     {
@@ -404,7 +404,7 @@ retval_t set_leg_oqpsk(trx_id_t trx_id)
     }
 
     /* Set transmit power */
-    int pwr = 14;
+    int pwr = 8;
     status = tal_pib_set(trx_id, phyTransmitPower, (pib_value_t *)&pwr);
     if (status != MAC_SUCCESS)
     {

@@ -65,7 +65,7 @@ typedef enum app_state_tag
 #define DEST_ADDR_MODE          FCF_SHORT_ADDR // FCF_LONG_ADDR
 #define SRC_ADDR_MODE           FCF_SHORT_ADDR // FCF_LONG_ADDR
 #define PEER_IEEE_ADDR          0x0807060504030201
-#define PEER_ACK_REQUEST        true
+#define PEER_ACK_REQUEST        false
 #define RETRANSMISSION_ENABLED  true
 #define CSMA_MODE               CSMA_UNSLOTTED
 
@@ -132,6 +132,8 @@ void chat_handle_incoming_frame(trx_id_t trx_id, frame_info_t *rx_frame);
 void get_chat_input(char* input);
 void chat_tx_done_cb(trx_id_t trx_id, retval_t status, frame_info_t *frame);
 void init_tx_frame(void);
+void set_loop_tx(int nCount);
+uint8_t get_loop_tx(void);
 
 void print_all_register();
 

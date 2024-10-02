@@ -28,6 +28,8 @@ uint8_t spi_reg_read(spi_t* spi,uint16_t address);
 int spi_reg_write(spi_t* spi,uint16_t address,uint8_t value);
 uint8_t spi_reg_bit_read(spi_t* spi,uint16_t address,uint8_t mask,uint8_t pos);
 uint8_t spi_reg_bit_write(spi_t* spi,uint16_t address,uint8_t mask,uint8_t pos,uint8_t new_value);
+int spi_mixer_write(spi_t *self, const uint8_t *tx_buf, size_t len);
+int spi_mixer_exchange(spi_t *self, uint8_t *rx_buf, const uint8_t *tx_buf, size_t len);
 
 
 #endif

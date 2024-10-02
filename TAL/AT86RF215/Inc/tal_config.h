@@ -54,6 +54,10 @@
 #define TRX_IRQ_POLARITY          0
 #endif
 
+#   ifndef ENABLE_TSTAMP
+#       define ENABLE_TSTAMP
+#   endif
+
 #ifdef TAL_SUPPORT_ALL_FEATURES
 
 /**
